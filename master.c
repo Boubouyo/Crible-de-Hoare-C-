@@ -65,6 +65,26 @@ void loop(/* paramètres */)
 }
 
 
+// Fonction de création des tubes nommées utilisés par le master/client
+void createNamedTube(){
+	int ret = mkfifo("MasterToClient", 0641);
+	myassert(ret == 0, "Erreur création tube nommés: MasterToClient");
+	
+	ret = mkfifo("ClientToMaster", 0641);
+	myassert(ret == 0, "Erreur création tube nommés: ClientToMaster");
+
+}
+
+// Fonction de destruction des tubes nommées utilisés par le master/client
+void unlinkNamedTube(){
+	int ret = unlink("MasterToClient");
+	myassert(ret == 0, "Erreur création tube nommés: MasterToClient");
+	
+	ret = unlink("ClientToMaster");
+	myassert(ret == 0, "Erreur création tube nommés: ClientToMaster");
+
+}
+
 /************************************************************************
  * Fonction principale
  ************************************************************************/
@@ -76,12 +96,16 @@ int main(int argc, char * argv[])
 
     // - création des sémaphores
     // - création des tubes nommés
+    
+    createNamedTube();
+    
     // - création du premier worker
 
     // boucle infinie
     loop(/* paramètres */);
 
     // destruction des tubes nommés, des sémaphores, ...
+    unlinkNamedTube();
 
     return EXIT_SUCCESS;
 }
