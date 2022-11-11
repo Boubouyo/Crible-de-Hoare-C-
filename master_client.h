@@ -6,6 +6,18 @@
 //    - des fonctions communes (création tubes, écriture dans un tube,
 //      manipulation de sémaphores, ...)
 
+#define MASTER_TO_CLIENT_TUBE "MasterToClient"
+#define CLIENT_TO_MASTER_TUBE "ClientToMaster"
+
+//Ouvre le tube nommé d'écriture
+int openWritingTube();
+//Ouvre le tube nommé de lecture
+int openReadingTube();
+
+//Lecture sur le tube nommé
+void
+//Ecriture sur le tube nommé
+
 // ordres possibles pour le master
 #define ORDER_NONE                0
 #define ORDER_STOP               -1

@@ -90,6 +90,18 @@ void unlinkNamedTube(){
 
 }
 
+int openWritingTube(){
+	int fd = open(MASTER_TO_CLIENT_TUBE, O_WRONLY);
+    myassert(fd != -1, "Erreur openWritingTube: Echec de l'ouverture en écriture du tube MasterToClient côté master");
+    return fd;
+}
+
+int openReadingTube(){
+	int fd = open(CLIENT_TO_MASTER_TUBE, O_RDONLY);
+    myassert(fd != -1, "Erreur openWritingTube: Echec de l'ouverture en lecture du tube ClientToMaster côté master");
+    return fd;
+}
+
 /************************************************************************
  * Fonction principale
  ************************************************************************/

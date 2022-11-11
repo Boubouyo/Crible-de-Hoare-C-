@@ -7,6 +7,11 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include "myassert.h"
 
 #include "master_client.h"
@@ -76,6 +81,22 @@ static int parseArgs(int argc, char * argv[], int *number)
     return order;
 }
 
+/************************************************************************
+*								Mes Fonctions							*
+************************************************************************/
+
+
+int openWritingTube(){
+	int fd = open(CLIENT_TO_MASTER_TUBE, O_WRONLY);
+    myassert(fd != -1, "Erreur openWritingTube: Echec de l'ouverture en écriture du tube ClientToMaster côté client");
+    return fd;
+}
+
+int openReadingTube(){
+	int fd = open(MASTER_TO_CLIENT_TUBE, O_RDONLY);
+    myassert(fd != -1, "Erreur openWritingTube: Echec de l'ouverture en lecture du tube MasterToClient côté client");
+    return fd;
+}
 
 /************************************************************************
  * Fonction principale
