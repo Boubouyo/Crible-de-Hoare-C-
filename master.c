@@ -72,35 +72,25 @@ void loop(/* paramètres */)
 
 // Fonction de création des tubes nommées utilisés par le master/client
 void createNamedTube(){
-	int ret = mkfifo("MasterToClient", 0641);
-	myassert(ret == 0, "Erreur création tube nommés: MasterToClient");
+	int ret = mkfifo(MASTER_TO_CLIENT_TUBE, 0641);
+	myassert(ret == 0, "Erreur création tube nommé: MasterToClient");
 	
-	ret = mkfifo("ClientToMaster", 0641);
-	myassert(ret == 0, "Erreur création tube nommés: ClientToMaster");
+	ret = mkfifo(CLIENT_TO_MASTER_TUBE, 0641);
+	myassert(ret == 0, "Erreur création tube nommé: ClientToMaster");
 
 }
 
 // Fonction de destruction des tubes nommées utilisés par le master/client
 void unlinkNamedTube(){
-	int ret = unlink("MasterToClient");
-	myassert(ret == 0, "Erreur création tube nommés: MasterToClient");
+	int ret = unlink(MASTER_TO_CLIENT_TUBE);
+	myassert(ret == 0, "Erreur fermeture tube nommé: MasterToClient");
 	
-	ret = unlink("ClientToMaster");
-	myassert(ret == 0, "Erreur création tube nommés: ClientToMaster");
+	ret = unlink(CLIENT_TO_MASTER_TUBE);
+	myassert(ret == 0, "Erreur fermeture tube nommé: ClientToMaster");
 
 }
 
-int openWritingTube(){
-	int fd = open(MASTER_TO_CLIENT_TUBE, O_WRONLY);
-    myassert(fd != -1, "Erreur openWritingTube: Echec de l'ouverture en écriture du tube MasterToClient côté master");
-    return fd;
-}
 
-int openReadingTube(){
-	int fd = open(CLIENT_TO_MASTER_TUBE, O_RDONLY);
-    myassert(fd != -1, "Erreur openWritingTube: Echec de l'ouverture en lecture du tube ClientToMaster côté master");
-    return fd;
-}
 
 /************************************************************************
  * Fonction principale
@@ -114,16 +104,30 @@ int main(int argc, char * argv[])
     // - création des sémaphores
     // - création des tubes nommés
     
-    createNamedTube();
-    
     // - création du premier worker
+    createNamedTube();
+    int fd1 = openWritingTube(MASTER_TO_CLIENT_TUBE);
+    
+    int fd2 = openReadingTube(CLIENT_TO_MASTER_TUBE);
+    int message = 5;
+    writingInTube(fd1, &message);
+    
+    readingInTube(fd2, &message);
+    
+    printf("%d \n", message);
+    
+    sleep(20);
+    closeTube(fd1);
+    closeTube(fd2);
+    
+    
 
     // boucle infinie
     loop(/* paramètres */);
 
     // destruction des tubes nommés, des sémaphores, ...
-    unlinkNamedTube();
-
+    
+	unlinkNamedTube();
     return EXIT_SUCCESS;
 }
 

@@ -10,13 +10,17 @@
 #define CLIENT_TO_MASTER_TUBE "ClientToMaster"
 
 //Ouvre le tube nommé d'écriture
-int openWritingTube();
+int openWritingTube(const char * writingTube);
 //Ouvre le tube nommé de lecture
-int openReadingTube();
+int openReadingTube(const char * readingTube);
 
 //Lecture sur le tube nommé
-void
+void readingInTube(int fd, int* message);
 //Ecriture sur le tube nommé
+void writingInTube(int fd, const int* message);
+
+//Fermeture du tube nommé
+void closeTube(int fd);
 
 // ordres possibles pour le master
 #define ORDER_NONE                0

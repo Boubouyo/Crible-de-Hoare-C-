@@ -86,17 +86,7 @@ static int parseArgs(int argc, char * argv[], int *number)
 ************************************************************************/
 
 
-int openWritingTube(){
-	int fd = open(CLIENT_TO_MASTER_TUBE, O_WRONLY);
-    myassert(fd != -1, "Erreur openWritingTube: Echec de l'ouverture en écriture du tube ClientToMaster côté client");
-    return fd;
-}
 
-int openReadingTube(){
-	int fd = open(MASTER_TO_CLIENT_TUBE, O_RDONLY);
-    myassert(fd != -1, "Erreur openWritingTube: Echec de l'ouverture en lecture du tube MasterToClient côté client");
-    return fd;
-}
 
 /************************************************************************
  * Fonction principale
@@ -135,6 +125,24 @@ int main(int argc, char * argv[])
     //
     // N'hésitez pas à faire des fonctions annexes ; si la fonction main
     // ne dépassait pas une trentaine de lignes, ce serait bien.
+    
+    int fd1 = openWritingTube(CLIENT_TO_MASTER_TUBE);
+    printf("coucou\n");
+    int fd2 = openReadingTube(MASTER_TO_CLIENT_TUBE);
+    
+    int message = 0;
+    
+    readingInTube(fd2, &message);
+    printf("%d \n", message);
+    
+    
+    message += 2;
+    
+    writingInTube(fd1, &message);
+    
+    closeTube(fd1);
+    closeTube(fd2);
+    
     
     return EXIT_SUCCESS;
 }
