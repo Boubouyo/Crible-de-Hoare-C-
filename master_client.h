@@ -9,18 +9,16 @@
 #define MASTER_TO_CLIENT_TUBE "MasterToClient"
 #define CLIENT_TO_MASTER_TUBE "ClientToMaster"
 
-//Ouvre le tube nommé d'écriture
-int openWritingTube(const char * writingTube);
-//Ouvre le tube nommé de lecture
-int openReadingTube(const char * readingTube);
+struct masterClientMessage{
+	bool isPrime;
+	int order;
+	int number;
+};
 
-//Lecture sur le tube nommé
-void readingInTube(int fd, int* message);
-//Ecriture sur le tube nommé
-void writingInTube(int fd, const int* message);
-
-//Fermeture du tube nommé
-void closeTube(int fd);
+//Envoie un message par le tube nommé writingTube
+void sendMessage(const char * writingTube, const struct masterClientMessage * message);
+//Recois un message par le tube nommé readingTube
+void receiveMessage(const char * readingTube, struct masterClientMessage * message);
 
 // ordres possibles pour le master
 #define ORDER_NONE                0

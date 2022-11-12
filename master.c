@@ -42,6 +42,55 @@ static void usage(const char *exeName, const char *message)
  ************************************************************************/
 void loop(/* paramètres */)
 {
+	struct masterClientMessage sendingMessage;
+    sendingMessage.isPrime = false;
+    sendingMessage.order = -1;
+    sendingMessage.number = -1;
+    
+    struct masterClientMessage receivingMessage;
+    
+    receiveMessage(CLIENT_TO_MASTER_TUBE, &receivingMessage);
+    
+    switch (receivingMessage.order){
+		//STOP
+		case -1: {
+			printf("STOP\n");
+			printf("%d\n", receivingMessage.order);
+			sendingMessage.number = 10;
+			sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+		 	break;
+		}
+		//COMPUTE
+		case 1: {
+			printf("COMPUTE\n");
+			printf("%d %d\n", receivingMessage.order, receivingMessage.number);
+			
+			sendingMessage.isPrime = true;
+			sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+		 	break;
+		}
+		//HOW_MANY_PRIME
+		case 2: {
+			printf("HOW_MANY_PRIME\n");
+			printf("%d\n", receivingMessage.order);
+			
+			sendingMessage.number = 20;
+			
+			sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+		 	break;
+		}
+		//HIGHEST_PRIME 
+		case 3: {
+			printf("HIGHEST_PRIME\n");
+			printf("%d\n", receivingMessage.order);
+			
+			sendingMessage.number = 30;
+			sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+		 	break;
+		}
+	}
+     	
+
     // boucle infinie :
     // - ouverture des tubes (cf. rq client.c)
     // - attente d'un ordre du client (via le tube nommé)
@@ -105,22 +154,6 @@ int main(int argc, char * argv[])
     // - création des tubes nommés
     createNamedTube();
     // - création du premier worker
-    int message = 5;
-    
-    int fd1 = openWritingTube(MASTER_TO_CLIENT_TUBE);
-    writingInTube(fd1, &message);
-    closeTube(fd1);
-    
-    int fd2 = openReadingTube(CLIENT_TO_MASTER_TUBE);
-    
-    readingInTube(fd2, &message);
-    closeTube(fd2);
-    
-    
-    
-    
-    printf("%d \n", message);
-    
     
     
     

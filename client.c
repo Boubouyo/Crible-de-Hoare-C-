@@ -94,9 +94,60 @@ static int parseArgs(int argc, char * argv[], int *number)
 
 int main(int argc, char * argv[])
 {
-    int number = 0;
+	int number = -1;
     int order = parseArgs(argc, argv, &number);
-    printf("%d\n", order); // pour éviter le warning
+    
+    struct masterClientMessage sendingMessage;
+    sendingMessage.isPrime = false;
+    sendingMessage.order = order;
+    sendingMessage.number = number;
+    
+    struct masterClientMessage receivingMessage;
+    
+    
+    switch (sendingMessage.order){
+    
+		//STOP
+		case -1: {
+			printf("STOP\n");
+			sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
+			receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
+			printf("%d \n", receivingMessage.number);
+		 	break;
+		}
+		//COMPUTE
+		case 1: {
+			printf("COMPUTE %d\n", sendingMessage.number);
+			sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
+			receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
+			printf("%d \n", receivingMessage.isPrime);
+		 	break;
+		}
+		//HOW_MANY_PRIME
+		case 2: {
+			printf("HOW_MANY_PRIME\n");
+			sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
+			receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
+			
+			printf("%d \n", receivingMessage.number);
+		 	break;
+		}
+		//HIGHEST_PRIME 
+		case 3: {
+			printf("HIGHEST_PRIME\n");
+			sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
+			receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
+			printf("%d \n", receivingMessage.number);
+		 	break;
+		}
+		//LOCAL_COMPUTE
+		case 4: {
+			printf("LOCAL_COMPUTE\n");
+		 	break;
+		}
+	}
+
+
 
     // order peut valoir 5 valeurs (cf. master_client.h) :
     //      - ORDER_COMPUTE_PRIME_LOCAL
@@ -126,22 +177,10 @@ int main(int argc, char * argv[])
     // N'hésitez pas à faire des fonctions annexes ; si la fonction main
     // ne dépassait pas une trentaine de lignes, ce serait bien.
     
-    int fd2 = openReadingTube(MASTER_TO_CLIENT_TUBE);
-    int message = 0;
-    
-    readingInTube(fd2, &message);
-    printf("%d \n", message);
-    closeTube(fd2);
     
     
-    int fd1 = openWritingTube(CLIENT_TO_MASTER_TUBE);
-    
-    message += 2;
-    
-    writingInTube(fd1, &message);
     
     
-    closeTube(fd1);
     
     
     return EXIT_SUCCESS;
