@@ -103,22 +103,25 @@ int main(int argc, char * argv[])
 
     // - création des sémaphores
     // - création des tubes nommés
-    
-    // - création du premier worker
     createNamedTube();
+    // - création du premier worker
+    int message = 5;
+    
     int fd1 = openWritingTube(MASTER_TO_CLIENT_TUBE);
+    writingInTube(fd1, &message);
+    closeTube(fd1);
     
     int fd2 = openReadingTube(CLIENT_TO_MASTER_TUBE);
-    int message = 5;
-    writingInTube(fd1, &message);
     
     readingInTube(fd2, &message);
+    closeTube(fd2);
+    
+    
+    
     
     printf("%d \n", message);
     
-    sleep(20);
-    closeTube(fd1);
-    closeTube(fd2);
+    
     
     
 

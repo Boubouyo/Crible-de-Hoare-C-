@@ -126,22 +126,22 @@ int main(int argc, char * argv[])
     // N'hésitez pas à faire des fonctions annexes ; si la fonction main
     // ne dépassait pas une trentaine de lignes, ce serait bien.
     
-    int fd1 = openWritingTube(CLIENT_TO_MASTER_TUBE);
-    printf("coucou\n");
     int fd2 = openReadingTube(MASTER_TO_CLIENT_TUBE);
-    
     int message = 0;
     
     readingInTube(fd2, &message);
     printf("%d \n", message);
+    closeTube(fd2);
     
+    
+    int fd1 = openWritingTube(CLIENT_TO_MASTER_TUBE);
     
     message += 2;
     
     writingInTube(fd1, &message);
     
+    
     closeTube(fd1);
-    closeTube(fd2);
     
     
     return EXIT_SUCCESS;

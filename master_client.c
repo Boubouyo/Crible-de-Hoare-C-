@@ -35,14 +35,14 @@ int openReadingTube(const char * readingTube){
 void writingInTube(int fd, const int* message){
 
 	int ret = write(fd, message, sizeof(int));
-    myassert(ret == sizeof(char), "Erreur writingInTube: Taille du message envoyé incorrecte");
+    myassert(ret == sizeof(int), "Erreur writingInTube: Taille du message envoyé incorrecte");
     
 }
 
 void readingInTube(int fd, int* message){
 
-	int ret = read(fd, message, sizeof(char));
-    myassert((ret == sizeof(char)) || (ret == 0), "Erreur readingInTube: Taille du message reçu incorrecte");
+	int ret = read(fd, message, sizeof(int));
+    myassert((ret == sizeof(int)) || (ret == 0), "Erreur readingInTube: Taille du message reçu incorrecte");
 }
 
 void closeTube(int fd){
