@@ -9,11 +9,25 @@
 #define MASTER_TO_CLIENT_TUBE "MasterToClient"
 #define CLIENT_TO_MASTER_TUBE "ClientToMaster"
 
+// Mutex
+#define MON_FICHIER "master_client.h"
+#define PROJ_ID 5
+
+#define MA_CLE ftok(MON_FICHIER, PROJ_ID)
+
+// Tube nommé
+// Enlever isPrime car un booléen et un entier valant 0 ou 1(combiné a isPrime)
 struct masterClientMessage{
 	bool isPrime;
 	int order;
 	int number;
 };
+
+//Empeche le master de detruire les tubes et semaphores avant que le client est fini
+void entrerSync(int semId);
+//Permet au master de detruire les tubes et semaphores
+void sortirSync(int semId);
+
 
 //Envoie un message par le tube nommé writingTube
 void sendMessage(const char * writingTube, const struct masterClientMessage * message);

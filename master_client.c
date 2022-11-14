@@ -15,32 +15,34 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
 
 // fonctions éventuelles internes au fichier
 
 //Ouvre le tube nommé d'écriture
-int openWritingTube(const char * writingTube){
+static int openWritingTube(const char * writingTube){
 	int fd = open(writingTube, O_WRONLY);
     myassert(fd != -1, "Erreur openWritingTube: Echec de l'ouverture en écriture du tube nommé");
     return fd;
 }
 
 //Ouvre le tube nommé de lecture
-int openReadingTube(const char * readingTube){
+static int openReadingTube(const char * readingTube){
 	int fd = open(readingTube, O_RDONLY);
     myassert(fd != -1, "Erreur openWritingTube: Echec de l'ouverture en lecture du tube nommé");
     return fd;
 }
 
 //Lecture sur le tube nommé
-void readingInTube(int fd, struct masterClientMessage* message){
+static void readingInTube(int fd, struct masterClientMessage* message){
 
 	int ret = read(fd, message, sizeof(struct masterClientMessage));
     myassert((ret == sizeof(struct masterClientMessage)) || (ret == 0), "Erreur readingInTube: Taille du message reçu incorrecte");
 }
 
 //Ecriture sur le tube nommé
-void writingInTube(int fd, const struct masterClientMessage* message){
+static void writingInTube(int fd, const struct masterClientMessage* message){
 
 	int ret = write(fd, message, sizeof(struct masterClientMessage));
     myassert(ret == sizeof(struct masterClientMessage), "Erreur writingInTube: Taille du message envoyé incorrecte");
@@ -62,6 +64,23 @@ void receiveMessage(const char * readingTube, struct masterClientMessage * messa
 	close(fd);
 }
 
+//-----------------------------------------------------------------
+
+
+void entrerSync(int semId)
+{
+    struct sembuf monOp1 = {1,-1,0};
+	int ret = semop(semId, &monOp1, 1);
+	myassert(ret != -1, "Erreur entrerSC: Echec de l'entrée en secion critique");
+}
+
+
+void sortirSync(int semId)
+{
+    struct sembuf monOp1 = {1,+1,0};
+	int ret = semop(semId, &monOp1, 1);
+	myassert(ret != -1, "Erreur sortirSC: Echec de la sortie de secion critique");
+}
 
 
 

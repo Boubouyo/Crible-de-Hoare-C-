@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
 
 #include "myassert.h"
 
@@ -84,8 +86,32 @@ static int parseArgs(int argc, char * argv[], int *number)
 /************************************************************************
 *								Mes Fonctions							*
 ************************************************************************/
+// Récupération du sémaphore
+static int my_semget()
+{
+    int id = semget(MA_CLE, 2, IPC_EXCL);
+	myassert(id != -1, "Erreur my_semget: Echec de la récupération du sémaphore");
+    return id;
+}
 
 
+//-----------------------------------------------------------------
+// Entrer en SC(communication avec le master commencé)
+static void entrerSC(int semId)
+{
+    struct sembuf monOp1 = {0,-1,0};
+	int ret = semop(semId, &monOp1, 1);
+	myassert(ret != -1, "Erreur entrerSC: Echec de l'entrée en section critique");
+}
+
+//-----------------------------------------------------------------
+// Sortie de SC (communication avec le master terminé)
+static void sortirSC(int semId)
+{
+    struct sembuf monOp1 = {0,+1,0};
+	int ret = semop(semId, &monOp1, 1);
+	myassert(ret != -1, "Erreur sortirSC: Echec de la sortie de section critique");
+}
 
 
 /************************************************************************
@@ -94,6 +120,7 @@ static int parseArgs(int argc, char * argv[], int *number)
 
 int main(int argc, char * argv[])
 {
+	int semId = my_semget();
 	int number = -1;
     int order = parseArgs(argc, argv, &number);
     
@@ -104,7 +131,8 @@ int main(int argc, char * argv[])
     
     struct masterClientMessage receivingMessage;
     
-    
+    entrerSC(semId);
+    entrerSync(semId);
     switch (sendingMessage.order){
     
 		//STOP
@@ -146,7 +174,9 @@ int main(int argc, char * argv[])
 		 	break;
 		}
 	}
-
+	sortirSC(semId);
+	sortirSync(semId);
+	
 
 
     // order peut valoir 5 valeurs (cf. master_client.h) :

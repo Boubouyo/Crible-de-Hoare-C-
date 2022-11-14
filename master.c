@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
 
 #include "myassert.h"
 
@@ -42,54 +44,57 @@ static void usage(const char *exeName, const char *message)
  ************************************************************************/
 void loop(/* paramètres */)
 {
-	struct masterClientMessage sendingMessage;
-    sendingMessage.isPrime = false;
-    sendingMessage.order = -1;
-    sendingMessage.number = -1;
-    
-    struct masterClientMessage receivingMessage;
-    
-    receiveMessage(CLIENT_TO_MASTER_TUBE, &receivingMessage);
-    
-    switch (receivingMessage.order){
-		//STOP
-		case -1: {
-			printf("STOP\n");
-			printf("%d\n", receivingMessage.order);
-			sendingMessage.number = 10;
-			sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
-		 	break;
+	bool stop = false;
+	while(!stop){
+		struct masterClientMessage sendingMessage;
+		sendingMessage.isPrime = false;
+		sendingMessage.order = -1;
+		sendingMessage.number = -1;
+		
+		struct masterClientMessage receivingMessage;
+		
+		receiveMessage(CLIENT_TO_MASTER_TUBE, &receivingMessage);
+		
+		switch (receivingMessage.order){
+			//STOP
+			case -1: {
+				printf("STOP\n");
+				printf("%d\n", receivingMessage.order);
+				sendingMessage.number = 10;
+				sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+				stop = true;
+			 	break;
+			}
+			//COMPUTE
+			case 1: {
+				printf("COMPUTE\n");
+				printf("%d %d\n", receivingMessage.order, receivingMessage.number);
+				
+				sendingMessage.isPrime = true;
+				sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+			 	break;
+			}
+			//HOW_MANY_PRIME
+			case 2: {
+				printf("HOW_MANY_PRIME\n");
+				printf("%d\n", receivingMessage.order);
+				
+				sendingMessage.number = 20;
+				
+				sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+			 	break;
+			}
+			//HIGHEST_PRIME 
+			case 3: {
+				printf("HIGHEST_PRIME\n");
+				printf("%d\n", receivingMessage.order);
+				
+				sendingMessage.number = 30;
+				sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+			 	break;
+			}
 		}
-		//COMPUTE
-		case 1: {
-			printf("COMPUTE\n");
-			printf("%d %d\n", receivingMessage.order, receivingMessage.number);
-			
-			sendingMessage.isPrime = true;
-			sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
-		 	break;
-		}
-		//HOW_MANY_PRIME
-		case 2: {
-			printf("HOW_MANY_PRIME\n");
-			printf("%d\n", receivingMessage.order);
-			
-			sendingMessage.number = 20;
-			
-			sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
-		 	break;
-		}
-		//HIGHEST_PRIME 
-		case 3: {
-			printf("HIGHEST_PRIME\n");
-			printf("%d\n", receivingMessage.order);
-			
-			sendingMessage.number = 30;
-			sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
-		 	break;
-		}
-	}
-     	
+     }
 
     // boucle infinie :
     // - ouverture des tubes (cf. rq client.c)
@@ -120,7 +125,7 @@ void loop(/* paramètres */)
 
 
 // Fonction de création des tubes nommées utilisés par le master/client
-void createNamedTube(){
+static void createNamedTube(){
 	int ret = mkfifo(MASTER_TO_CLIENT_TUBE, 0641);
 	myassert(ret == 0, "Erreur création tube nommé: MasterToClient");
 	
@@ -130,7 +135,7 @@ void createNamedTube(){
 }
 
 // Fonction de destruction des tubes nommées utilisés par le master/client
-void unlinkNamedTube(){
+static void unlinkNamedTube(){
 	int ret = unlink(MASTER_TO_CLIENT_TUBE);
 	myassert(ret == 0, "Erreur fermeture tube nommé: MasterToClient");
 	
@@ -139,7 +144,27 @@ void unlinkNamedTube(){
 
 }
 
+//---------------------------------------------------------------
+// Création du sémaphore 
+static int my_semget()
+{
+    int id = semget(MA_CLE, 2, IPC_CREAT|0641);
+	myassert(id != -1, "Erreur my_semget: Echec de la création du sémaphore");
+	int ret = semctl(id, 0, SETVAL, 1);
+	myassert(ret != -1, "Erreur my_semget: Echec de l'initialisation du premier sémaphore");
+	ret = semctl(id, 1, SETVAL, 1);
+	myassert(ret != -1, "Erreur my_semget: Echec de l'initialisation du second sémaphore");
+	
+	
+    return id;
+}
 
+// destruction du sémaphore
+static void my_destroy(int semId)
+{
+    int ret = semctl(semId, -1, IPC_RMID);
+	myassert(ret != -1, "Erreur my_destroy: Echec de la desturction du sémaphore");
+}
 
 /************************************************************************
  * Fonction principale
@@ -151,6 +176,7 @@ int main(int argc, char * argv[])
         usage(argv[0], NULL);
 
     // - création des sémaphores
+    int semId = my_semget();
     // - création des tubes nommés
     createNamedTube();
     // - création du premier worker
@@ -163,6 +189,8 @@ int main(int argc, char * argv[])
 
     // destruction des tubes nommés, des sémaphores, ...
     
+    entrerSync(semId);
+    my_destroy(semId);
 	unlinkNamedTube();
     return EXIT_SUCCESS;
 }
