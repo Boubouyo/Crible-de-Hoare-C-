@@ -42,7 +42,7 @@ static void usage(const char *exeName, const char *message)
 /************************************************************************
  * boucle principale de communication avec le client
  ************************************************************************/
-void loop(/* paramètres */)
+void loop(int fdFromWorker, int fdToWorker)
 {
 	bool stop = false;
 	while(!stop){
@@ -71,6 +71,12 @@ void loop(/* paramètres */)
 				printf("%d %d\n", receivingMessage.order, receivingMessage.number);
 				
 				sendingMessage.isPrime = true;
+				int ret = write(fdToWorker, &receivingMessage.number, sizeof(int));
+    			myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
+    			
+    			ret = read(fdFromWorker, &sendingMessage.number, sizeof(int));
+    			myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
+    			printf("%d \n", sendingMessage.number);
 				sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
 			 	break;
 			}
@@ -166,6 +172,11 @@ static void my_destroy(int semId)
 	myassert(ret != -1, "Erreur my_destroy: Echec de la desturction du sémaphore");
 }
 
+//----------------------------------------------------------------------
+
+
+
+
 /************************************************************************
  * Fonction principale
  ************************************************************************/
@@ -181,11 +192,32 @@ int main(int argc, char * argv[])
     createNamedTube();
     // - création du premier worker
     
+    int ret, retFork;
+    int fdFromWorker[2];
+    int fdToWorker[2];
+    
+    ret = pipe(fdFromWorker);
+    myassert(ret == 0, "Erreur création du pipe anonyme fdFromWorker");
+    ret = pipe(fdToWorker);
+    myassert(ret == 0, "Erreur création du pipe anonyme fdToWorker");
+    
+    retFork = fork();
+    myassert(retFork != -1, "Erreur: création du fils");
+    
+    if(retFork == 0){
+    	close(fdFromWorker[0]);
+    	close(fdToWorker[1]);
+    	initWorker(2, fdFromWorker[1], fdToWorker[0]);
+    }
+    else{
+    	close(fdFromWorker[1]);
+    	close(fdToWorker[0]);
+    }
     
     
 
     // boucle infinie
-    loop(/* paramètres */);
+    loop(fdFromWorker[0], fdToWorker[1]);
 
     // destruction des tubes nommés, des sémaphores, ...
     

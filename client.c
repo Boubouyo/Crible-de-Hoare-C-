@@ -149,6 +149,7 @@ int main(int argc, char * argv[])
 			sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
 			receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
 			printf("%d \n", receivingMessage.isPrime);
+			printf("%d \n", receivingMessage.number);
 		 	break;
 		}
 		//HOW_MANY_PRIME
