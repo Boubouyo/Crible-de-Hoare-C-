@@ -125,11 +125,15 @@ int main(int argc, char * argv[])
     loop(&data);
     
     
-    
-	
 	
 
     // libérer les ressources : fermeture des files descriptors par exemple
+    close(data.fdPreviousWorker);
+    
+    if(data.number != 10)
+    close(data.fdNextWorker);
+    
+    close(data.fdToMaster);
 
     return EXIT_SUCCESS;
 }

@@ -13,6 +13,9 @@
 #include <fcntl.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
+#include <pthread.h>
+
+#include <math.h>
 
 #include "myassert.h"
 
@@ -114,6 +117,88 @@ static void sortirSC(int semId)
 }
 
 
+//------------------------------------------------------------------------
+//crible d'erastosthene
+
+typedef struct
+{
+    bool *tab;
+    int tailleTab;
+    int number;
+    pthread_mutex_t theMutex;
+} ThreadData;
+
+void * codeThread(void * arg)
+{
+    ThreadData *data = (ThreadData *) arg;
+
+    pthread_mutex_lock(&(data->theMutex));
+    
+    for(int i = 2 ; (data->number * i) - 2 < data->tailleTab; i++){
+    	data->tab[(data->number * i) - 2] = false;
+    }
+    
+    pthread_mutex_unlock(&(data->theMutex));
+    
+    return NULL;
+}
+
+
+
+void local_compute(int number){
+	
+	pthread_mutex_t monMutex = PTHREAD_MUTEX_INITIALIZER;
+	
+	bool erastosthene[number - 2];
+	
+	for(int i = 0; i < number -2; i++){
+	erastosthene[i] = true;
+	}
+	
+	
+	
+	int nbThread = sqrt(number) - 2 ;
+	
+	pthread_t tabId[nbThread];
+	
+	ThreadData datas[nbThread];
+	
+	for (int i = 0; i < nbThread; i++)
+    {
+        datas[i].tab = erastosthene;
+        datas[i].tailleTab = number -2;
+        datas[i].number = i+2;
+        datas[i].theMutex = monMutex;
+    }
+	
+	
+	// lancement des threads
+    for (int i = 0; i < nbThread; i++)
+    {
+        // et donc on passe un pointeur sur une struct différente chaque fois
+        int ret = pthread_create(&(tabId[i]), NULL, codeThread, &(datas[i]));
+        myassert(ret == 0, "Echec du lancement d'un thread");
+    }
+
+    // attente de la fin des threads
+    for (int i = 0; i < nbThread; i++)
+    {
+        int ret = pthread_join(tabId[i], NULL);
+        myassert(ret == 0, "Echec de l'attente de la fin d'un thread");
+    }
+    
+    //affichage des nombres premiers
+    for(int i = 0; i < number - 2 ; i ++){
+    	if(erastosthene[i]){
+    		printf("%d ", i + 2);
+    	}
+    }
+    printf("\n");
+	
+	pthread_mutex_destroy(&monMutex);
+	
+}
+
 /************************************************************************
  * Fonction principale
  ************************************************************************/
@@ -172,6 +257,7 @@ int main(int argc, char * argv[])
 		//LOCAL_COMPUTE
 		case 4: {
 			printf("LOCAL_COMPUTE\n");
+			local_compute(number);
 		 	break;
 		}
 	}

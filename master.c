@@ -196,10 +196,11 @@ int main(int argc, char * argv[])
     int fdFromWorker[2];
     int fdToWorker[2];
     
-    ret = pipe(fdFromWorker);
-    myassert(ret == 0, "Erreur création du pipe anonyme fdFromWorker");
     ret = pipe(fdToWorker);
     myassert(ret == 0, "Erreur création du pipe anonyme fdToWorker");
+    ret = pipe(fdFromWorker);
+    myassert(ret == 0, "Erreur création du pipe anonyme fdFromWorker");
+    
     
     retFork = fork();
     myassert(retFork != -1, "Erreur: création du fils");
