@@ -17,11 +17,11 @@
 
 // Tube nommé
 // Enlever isPrime car un booléen et un entier valant 0 ou 1(combiné a isPrime)
-struct masterClientMessage{
+typedef struct {
 	bool isPrime;
 	int order;
 	int number;
-};
+}masterClientMessage;
 
 //Empeche le master de detruire les tubes et semaphores avant que le client est fini
 void entrerSync(int semId);
@@ -30,9 +30,9 @@ void sortirSync(int semId);
 
 
 //Envoie un message par le tube nommé writingTube
-void sendMessage(const char * writingTube, const struct masterClientMessage * message);
+void sendMessage(const char * writingTube, const masterClientMessage * message);
 //Recois un message par le tube nommé readingTube
-void receiveMessage(const char * readingTube, struct masterClientMessage * message);
+void receiveMessage(const char * readingTube, masterClientMessage * message);
 
 // ordres possibles pour le master
 #define ORDER_NONE                0

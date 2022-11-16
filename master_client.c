@@ -35,30 +35,30 @@ static int openReadingTube(const char * readingTube){
 }
 
 //Lecture sur le tube nommé
-static void readingInTube(int fd, struct masterClientMessage* message){
+static void readingInTube(int fd, masterClientMessage* message){
 
-	int ret = read(fd, message, sizeof(struct masterClientMessage));
-    myassert((ret == sizeof(struct masterClientMessage)) || (ret == 0), "Erreur readingInTube: Taille du message reçu incorrecte");
+	int ret = read(fd, message, sizeof(masterClientMessage));
+    myassert((ret == sizeof(masterClientMessage)) || (ret == 0), "Erreur readingInTube: Taille du message reçu incorrecte");
 }
 
 //Ecriture sur le tube nommé
-static void writingInTube(int fd, const struct masterClientMessage* message){
+static void writingInTube(int fd, const masterClientMessage* message){
 
-	int ret = write(fd, message, sizeof(struct masterClientMessage));
-    myassert(ret == sizeof(struct masterClientMessage), "Erreur writingInTube: Taille du message envoyé incorrecte");
+	int ret = write(fd, message, sizeof(masterClientMessage));
+    myassert(ret == sizeof(masterClientMessage), "Erreur writingInTube: Taille du message envoyé incorrecte");
     
 }
 
 
 // fonctions éventuelles proposées dans le .h
 
-void sendMessage(const char * writingTube, const struct masterClientMessage * message){
+void sendMessage(const char * writingTube, const masterClientMessage * message){
 	int fd = openWritingTube(writingTube);
 	writingInTube(fd, message);
 	close(fd);
 }
 
-void receiveMessage(const char * readingTube, struct masterClientMessage * message){
+void receiveMessage(const char * readingTube, masterClientMessage * message){
 	int fd = openReadingTube(readingTube);
 	readingInTube(fd, message);
 	close(fd);

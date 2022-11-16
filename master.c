@@ -24,7 +24,13 @@
 
 // on peut ici définir une structure stockant tout ce dont le master
 // a besoin
-
+typedef struct workerData{
+	int numberMaxCompute;
+	int fdToWorker;
+	int fdFromWorker;
+	int highestPrime;
+	int howMany;
+}MasterData;
 
 /************************************************************************
  * Usage et analyse des arguments passés en ligne de commande
@@ -46,12 +52,12 @@ void loop(int fdFromWorker, int fdToWorker)
 {
 	bool stop = false;
 	while(!stop){
-		struct masterClientMessage sendingMessage;
+		masterClientMessage sendingMessage;
 		sendingMessage.isPrime = false;
 		sendingMessage.order = -1;
 		sendingMessage.number = -1;
 		
-		struct masterClientMessage receivingMessage;
+		masterClientMessage receivingMessage;
 		
 		receiveMessage(CLIENT_TO_MASTER_TUBE, &receivingMessage);
 		
@@ -60,7 +66,10 @@ void loop(int fdFromWorker, int fdToWorker)
 			case -1: {
 				printf("STOP\n");
 				printf("%d\n", receivingMessage.order);
-				sendingMessage.number = 10;
+				
+				int ret = write(fdToWorker, &receivingMessage.order, sizeof(int));
+    			myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
+    			
 				sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
 				stop = true;
 			 	break;

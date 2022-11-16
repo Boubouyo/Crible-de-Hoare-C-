@@ -132,13 +132,18 @@ void * codeThread(void * arg)
 {
     ThreadData *data = (ThreadData *) arg;
 
-    pthread_mutex_lock(&(data->theMutex));
+    
     
     for(int i = 2 ; (data->number * i) - 2 < data->tailleTab; i++){
+    
+    	// Verrouillé: Entrer en SC
+    	pthread_mutex_lock(&(data->theMutex));
     	data->tab[(data->number * i) - 2] = false;
+    	//Deverouillé: Sortie de la SC
+    	pthread_mutex_unlock(&(data->theMutex));
     }
     
-    pthread_mutex_unlock(&(data->theMutex));
+    
     
     return NULL;
 }
@@ -205,100 +210,74 @@ void local_compute(int number){
 
 int main(int argc, char * argv[])
 {
-	int semId = my_semget();
+	
 	int number = -1;
     int order = parseArgs(argc, argv, &number);
     
-    struct masterClientMessage sendingMessage;
-    sendingMessage.isPrime = false;
-    sendingMessage.order = order;
-    sendingMessage.number = number;
+    if(order == 4){
+    //LOCAL_COMPUTE
+		printf("LOCAL_COMPUTE\n");
+		local_compute(number);
+    }
     
-    struct masterClientMessage receivingMessage;
+    else{
+    	
+   		
+   		int semId = my_semget();
+   		entrerSC(semId);
+		entrerSync(semId);
+		
+    	
+    	
+    	masterClientMessage sendingMessage;
+		sendingMessage.isPrime = false;
+		sendingMessage.order = order;
+		sendingMessage.number = number;
+		
+		masterClientMessage receivingMessage;
+		
+		
     
-    entrerSC(semId);
-    entrerSync(semId);
-    switch (sendingMessage.order){
-    
-		//STOP
-		case -1: {
-			printf("STOP\n");
-			sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
-			receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
-			printf("%d \n", receivingMessage.number);
-		 	break;
+		switch (sendingMessage.order){
+		
+			//STOP
+			case -1: {
+				printf("STOP\n");
+				sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
+				receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
+				printf("%d \n", receivingMessage.number);
+			 	break;
+			}
+			//COMPUTE
+			case 1: {
+				printf("COMPUTE %d\n", sendingMessage.number);
+				sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
+				receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
+				printf("%d \n", receivingMessage.isPrime);
+				printf("%d \n", receivingMessage.number);
+			 	break;
+			}
+			//HOW_MANY_PRIME
+			case 2: {
+				printf("HOW_MANY_PRIME\n");
+				sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
+				receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
+				
+				printf("%d \n", receivingMessage.number);
+			 	break;
+			}
+			//HIGHEST_PRIME 
+			case 3: {
+				printf("HIGHEST_PRIME\n");
+				sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
+				receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
+				printf("%d \n", receivingMessage.number);
+			 	break;
+			}
 		}
-		//COMPUTE
-		case 1: {
-			printf("COMPUTE %d\n", sendingMessage.number);
-			sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
-			receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
-			printf("%d \n", receivingMessage.isPrime);
-			printf("%d \n", receivingMessage.number);
-		 	break;
-		}
-		//HOW_MANY_PRIME
-		case 2: {
-			printf("HOW_MANY_PRIME\n");
-			sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
-			receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
-			
-			printf("%d \n", receivingMessage.number);
-		 	break;
-		}
-		//HIGHEST_PRIME 
-		case 3: {
-			printf("HIGHEST_PRIME\n");
-			sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
-			receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
-			printf("%d \n", receivingMessage.number);
-		 	break;
-		}
-		//LOCAL_COMPUTE
-		case 4: {
-			printf("LOCAL_COMPUTE\n");
-			local_compute(number);
-		 	break;
-		}
+		sortirSC(semId);
+		sortirSync(semId);
 	}
-	sortirSC(semId);
-	sortirSync(semId);
-	
-
-
-    // order peut valoir 5 valeurs (cf. master_client.h) :
-    //      - ORDER_COMPUTE_PRIME_LOCAL
-    //      - ORDER_STOP
-    //      - ORDER_COMPUTE_PRIME
-    //      - ORDER_HOW_MANY_PRIME
-    //      - ORDER_HIGHEST_PRIME
-    //
-    // si c'est ORDER_COMPUTE_PRIME_LOCAL
-    //    alors c'est un code complètement à part multi-thread
-    // sinon
-    //    - entrer en section critique :
-    //           . pour empêcher que 2 clients communiquent simultanément
-    //           . le mutex est déjà créé par le master
-    //    - ouvrir les tubes nommés (ils sont déjà créés par le master)
-    //           . les ouvertures sont bloquantes, il faut s'assurer que
-    //             le master ouvre les tubes dans le même ordre
-    //    - envoyer l'ordre et les données éventuelles au master
-    //    - attendre la réponse sur le second tube
-    //    - sortir de la section critique
-    //    - libérer les ressources (fermeture des tubes, ...)
-    //    - débloquer le master grâce à un second sémaphore (cf. ci-dessous)
-    // 
-    // Une fois que le master a envoyé la réponse au client, il se bloque
-    // sur un sémaphore ; le dernier point permet donc au master de continuer
-    //
-    // N'hésitez pas à faire des fonctions annexes ; si la fonction main
-    // ne dépassait pas une trentaine de lignes, ce serait bien.
-    
-    
-    
-    
-    
-    
     
     return EXIT_SUCCESS;
 }
