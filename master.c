@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
+#include <wait.h>
 
 #include "myassert.h"
 
@@ -48,7 +49,7 @@ static void usage(const char *exeName, const char *message)
 /************************************************************************
  * boucle principale de communication avec le client
  ************************************************************************/
-void loop(int fdFromWorker, int fdToWorker)
+void loop(MasterData* data)
 {
 	bool stop = false;
 	while(!stop){
@@ -67,10 +68,10 @@ void loop(int fdFromWorker, int fdToWorker)
 				printf("STOP\n");
 				printf("%d\n", receivingMessage.order);
 				
-				int ret = write(fdToWorker, &receivingMessage.order, sizeof(int));
+				int ret = write(data->fdToWorker, &receivingMessage.order, sizeof(int));
     			myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
     			
-				sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+				wait(NULL);
 				stop = true;
 			 	break;
 			}
@@ -78,15 +79,40 @@ void loop(int fdFromWorker, int fdToWorker)
 			case 1: {
 				printf("COMPUTE\n");
 				printf("%d %d\n", receivingMessage.order, receivingMessage.number);
+				int ret;
+				bool isPrime;
+				if(data->numberMaxCompute < receivingMessage.number){
+					
+					for(int i = data->numberMaxCompute+1 ; i <= receivingMessage.number; i++){
+						printf("%d", i);
+						ret = write(data->fdToWorker, &i, sizeof(int));
+						myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
+						
+						ret = read(data->fdFromWorker, &isPrime, sizeof(bool));
+						myassert(ret == sizeof(bool), "Erreur: Taille du message envoyé incorrecte");
+						printf(" %d\n", isPrime);
+						
+						if(isPrime){
+							data->howMany++;
+							data->highestPrime = i;
+						}
+					}
+					data->numberMaxCompute = receivingMessage.number;
+				}
+				else{
+					ret = write(data->fdToWorker, &receivingMessage.number , sizeof(int));
+					myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
+						
+					ret = read(data->fdFromWorker, &isPrime, sizeof(bool));
+					myassert(ret == sizeof(bool), "Erreur: Taille du message envoyé incorrecte");
 				
-				sendingMessage.isPrime = true;
-				int ret = write(fdToWorker, &receivingMessage.number, sizeof(int));
-    			myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
+				}
+				
     			
-    			ret = read(fdFromWorker, &sendingMessage.number, sizeof(int));
-    			myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
-    			printf("%d \n", sendingMessage.number);
-				sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+    			sendingMessage.isPrime = isPrime;
+    			
+    			
+    			
 			 	break;
 			}
 			//HOW_MANY_PRIME
@@ -94,9 +120,8 @@ void loop(int fdFromWorker, int fdToWorker)
 				printf("HOW_MANY_PRIME\n");
 				printf("%d\n", receivingMessage.order);
 				
-				sendingMessage.number = 20;
+				sendingMessage.number = data->howMany;
 				
-				sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
 			 	break;
 			}
 			//HIGHEST_PRIME 
@@ -104,11 +129,12 @@ void loop(int fdFromWorker, int fdToWorker)
 				printf("HIGHEST_PRIME\n");
 				printf("%d\n", receivingMessage.order);
 				
-				sendingMessage.number = 30;
-				sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
+				sendingMessage.number = data->highestPrime;
 			 	break;
 			}
 		}
+		
+		sendMessage(MASTER_TO_CLIENT_TUBE, &sendingMessage);
      }
 
     // boucle infinie :
@@ -192,9 +218,11 @@ static void my_destroy(int semId)
 
 int main(int argc, char * argv[])
 {
-    if (argc != 1)
+    if (argc != 1){
         usage(argv[0], NULL);
-
+	}
+	
+	MasterData data;
     // - création des sémaphores
     int semId = my_semget();
     // - création des tubes nommés
@@ -222,12 +250,18 @@ int main(int argc, char * argv[])
     else{
     	close(fdFromWorker[1]);
     	close(fdToWorker[0]);
+    	
+	data.numberMaxCompute = 2;
+	data.fdToWorker = fdToWorker[1];
+	data.fdFromWorker= fdFromWorker[0];
+	data.highestPrime = 2;
+	data.howMany = 1;
     }
     
     
 
     // boucle infinie
-    loop(fdFromWorker[0], fdToWorker[1]);
+    loop(&data);
 
     // destruction des tubes nommés, des sémaphores, ...
     

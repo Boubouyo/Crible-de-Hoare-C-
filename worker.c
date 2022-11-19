@@ -67,9 +67,8 @@ static void parseArgs(int argc, char * argv[] , struct workerData* data)
 
 void loop(struct workerData* data)
 {
-	bool stop = false;
 	// boucle infinie :
-	while(!stop){
+	while(true){
 
 		//    attendre l'arrivée d'un nombre à tester
 		int numberToTest = 0;
@@ -85,7 +84,7 @@ void loop(struct workerData* data)
 				wait(NULL);
 			}
 			//       sortir de la boucle
-			stop = !stop;
+			break;
 		}
 		
 		//    sinon c'est un nombre à tester, 4 possibilités :
@@ -97,7 +96,7 @@ void loop(struct workerData* data)
 		}
 		
 		//           - le nombre n'est pas premier
-		else if(numberToTest % data->number == 0){
+		else if((numberToTest % data->number) == 0){
 			bool isPrime = false;
 			ret = write(data->fdToMaster, &isPrime, sizeof(bool));
     		myassert(ret == sizeof(bool), "Erreur: Taille du message envoyé incorrecte");
@@ -107,7 +106,6 @@ void loop(struct workerData* data)
 			if(data->hasNextWorker){
 				ret = write(data->fdNextWorker, &numberToTest, sizeof(int));
 				myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
-				wait(NULL);
 			}
 			//           - s'il n'y a pas de worker suivant, le créer
 			else{
@@ -126,6 +124,9 @@ void loop(struct workerData* data)
 					close(fdToWorker[0]);
 					data->fdNextWorker = fdToWorker[1];
 					data->hasNextWorker = true;
+					ret = write(data->fdNextWorker, &numberToTest, sizeof(int));
+					myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
+					
 				}
 			}
 		}
@@ -151,15 +152,6 @@ int main(int argc, char * argv[])
     // Si on est créé c'est qu'on est un nombre premier
     // Envoyer au master un message positif pour dire
     // que le nombre testé est bien premier
-    
-    bool isPrime = true;
-    
-    int ret = write(data.fdToMaster, &isPrime, sizeof(bool));
-    myassert(ret == sizeof(bool), "Erreur: Taille du message envoyé incorrecte");
-    
-    
-    
-    
     
     
     loop(&data);

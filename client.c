@@ -154,15 +154,15 @@ void local_compute(int number){
 	
 	pthread_mutex_t monMutex = PTHREAD_MUTEX_INITIALIZER;
 	
-	bool erastosthene[number - 2];
+	bool erastosthene[number - 1];
 	
-	for(int i = 0; i < number -2; i++){
+	for(int i = 0; i < number -1; i++){
 	erastosthene[i] = true;
 	}
 	
 	
 	
-	int nbThread = sqrt(number) - 2 ;
+	int nbThread = sqrt(number) - 1 ;
 	
 	pthread_t tabId[nbThread];
 	
@@ -171,7 +171,7 @@ void local_compute(int number){
 	for (int i = 0; i < nbThread; i++)
     {
         datas[i].tab = erastosthene;
-        datas[i].tailleTab = number -2;
+        datas[i].tailleTab = number -1;
         datas[i].number = i+2;
         datas[i].theMutex = monMutex;
     }
@@ -193,7 +193,7 @@ void local_compute(int number){
     }
     
     //affichage des nombres premiers
-    for(int i = 0; i < number - 2 ; i ++){
+    for(int i = 0; i < number - 1 ; i ++){
     	if(erastosthene[i]){
     		printf("%d ", i + 2);
     	}
@@ -254,7 +254,6 @@ int main(int argc, char * argv[])
 				sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
 				receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
 				printf("%d \n", receivingMessage.isPrime);
-				printf("%d \n", receivingMessage.number);
 			 	break;
 			}
 			//HOW_MANY_PRIME
