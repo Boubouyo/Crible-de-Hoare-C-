@@ -126,6 +126,7 @@ typedef struct
     int tailleTab;
     int number;
     pthread_mutex_t theMutex;
+    
 } ThreadData;
 
 void * codeThread(void * arg)
@@ -154,7 +155,8 @@ void local_compute(int number){
 	
 	pthread_mutex_t monMutex = PTHREAD_MUTEX_INITIALIZER;
 	
-	bool erastosthene[number - 1];
+	bool * erastosthene;
+	erastosthene = malloc(sizeof(bool) *(number - 1));
 	
 	for(int i = 0; i < number -1; i++){
 	erastosthene[i] = true;
@@ -201,6 +203,7 @@ void local_compute(int number){
     printf("\n");
 	
 	pthread_mutex_destroy(&monMutex);
+	free(erastosthene);
 	
 }
 
@@ -216,7 +219,6 @@ int main(int argc, char * argv[])
     
     if(order == 4){
     //LOCAL_COMPUTE
-		printf("LOCAL_COMPUTE\n");
 		local_compute(number);
     }
     
@@ -230,47 +232,32 @@ int main(int argc, char * argv[])
     	
     	
     	masterClientMessage sendingMessage;
-		sendingMessage.isPrime = false;
-		sendingMessage.order = order;
-		sendingMessage.number = number;
+    	initMessage(&sendingMessage, order, number, false);
 		
 		masterClientMessage receivingMessage;
 		
-		
+		sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
+		receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
     
-		switch (sendingMessage.order){
-		
+		switch (order){
 			//STOP
 			case -1: {
-				printf("STOP\n");
-				sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
-				receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
-				printf("%d \n", receivingMessage.number);
+				printf("Réception de l'accusé de réception de la part du master\n");
 			 	break;
 			}
 			//COMPUTE
 			case 1: {
-				printf("COMPUTE %d\n", sendingMessage.number);
-				sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
-				receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
-				printf("%d \n", receivingMessage.isPrime);
+				printf("%d %s premier\n",number, receivingMessage.isPrime ? "est" : "n'est pas");
 			 	break;
 			}
 			//HOW_MANY_PRIME
 			case 2: {
-				printf("HOW_MANY_PRIME\n");
-				sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
-				receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
-				
-				printf("%d \n", receivingMessage.number);
+				printf("Le Master a calculé %d nombres premiers\n", receivingMessage.number);
 			 	break;
 			}
 			//HIGHEST_PRIME 
 			case 3: {
-				printf("HIGHEST_PRIME\n");
-				sendMessage(CLIENT_TO_MASTER_TUBE, &sendingMessage);
-				receiveMessage(MASTER_TO_CLIENT_TUBE, &receivingMessage);
-				printf("%d \n", receivingMessage.number);
+				printf("Le plus grand nombre premier calculé par le master est : %d \n", receivingMessage.number);
 			 	break;
 			}
 		}

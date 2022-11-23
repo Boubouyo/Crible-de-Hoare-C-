@@ -64,6 +64,14 @@ void receiveMessage(const char * readingTube, masterClientMessage * message){
 	close(fd);
 }
 
+
+//----------------------------------------------
+void initMessage(masterClientMessage* message, int order, int number, bool isPrime){
+	message->isPrime = isPrime;
+	message->order = order;
+	message->number = number;
+
+}
 //-----------------------------------------------------------------
 
 

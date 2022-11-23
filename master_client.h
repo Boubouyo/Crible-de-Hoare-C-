@@ -16,12 +16,15 @@
 #define MA_CLE ftok(MON_FICHIER, PROJ_ID)
 
 // Tube nommé
-// Enlever isPrime car un booléen et un entier valant 0 ou 1(combiné a isPrime)
 typedef struct {
 	bool isPrime;
 	int order;
 	int number;
 }masterClientMessage;
+
+//Initialisation de la structure de message
+void initMessage(masterClientMessage* message, int order, int number, bool isPrime);
+
 
 //Empeche le master de detruire les tubes et semaphores avant que le client est fini
 void entrerSync(int semId);

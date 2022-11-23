@@ -31,7 +31,7 @@ typedef struct workerData{
 	int fdFromWorker;
 	int highestPrime;
 	int howMany;
-}MasterData;
+}masterData;
 
 /************************************************************************
  * Usage et analyse des arguments passés en ligne de commande
@@ -46,17 +46,125 @@ static void usage(const char *exeName, const char *message)
 }
 
 
+
+
+
+
+
+
+
+
+
+/***********************************************************************
+* 							 TUBES NOMMÉS							   *
+***********************************************************************/
+
+// Fonction de création des tubes nommées utilisés par le master/client
+static void createNamedTube(){
+	int ret = mkfifo(MASTER_TO_CLIENT_TUBE, 0641);
+	myassert(ret == 0, "Erreur création tube nommé: MasterToClient");
+	
+	ret = mkfifo(CLIENT_TO_MASTER_TUBE, 0641);
+	myassert(ret == 0, "Erreur création tube nommé: ClientToMaster");
+
+}
+
+// Fonction de destruction des tubes nommées utilisés par le master/client
+static void unlinkNamedTube(){
+	int ret = unlink(MASTER_TO_CLIENT_TUBE);
+	myassert(ret == 0, "Erreur fermeture tube nommé: MasterToClient");
+	
+	ret = unlink(CLIENT_TO_MASTER_TUBE);
+	myassert(ret == 0, "Erreur fermeture tube nommé: ClientToMaster");
+
+}
+
+/******************************************************************************
+*						       	SÉMAPHORES								      *
+******************************************************************************/
+
+// Création du sémaphore 
+static int my_semget()
+{
+    int id = semget(MA_CLE, 2, IPC_CREAT|0641);
+	myassert(id != -1, "Erreur my_semget: Echec de la création du sémaphore");
+	int ret = semctl(id, 0, SETVAL, 1);
+	myassert(ret != -1, "Erreur my_semget: Echec de l'initialisation du premier sémaphore");
+	ret = semctl(id, 1, SETVAL, 1);
+	myassert(ret != -1, "Erreur my_semget: Echec de l'initialisation du second sémaphore");
+	
+	
+    return id;
+}
+
+
+
+// destruction du sémaphore
+static void my_destroy(int semId)
+{
+    int ret = semctl(semId, -1, IPC_RMID);
+	myassert(ret != -1, "Erreur my_destroy: Echec de la desturction du sémaphore");
+}
+
+
+/**********************************************************************
+*							TUBES ANONYMES							  *
+**********************************************************************/
+
+static void sendMessageToWorker(masterData * data, int number){
+
+	int ret = write(data->fdToWorker, &number, sizeof(int));
+	myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
+
+}
+
+static void receiveMessageToWorker(masterData * data, bool * isPrime){
+
+	int ret = read(data->fdFromWorker, isPrime, sizeof(bool));
+	myassert(ret == sizeof(bool), "Erreur: Taille du message envoyé incorrecte");
+
+}
+
+
+/***********************************************************************
+*							COMPUTE									   *
+***********************************************************************/
+
+bool compute(masterData * data, int number){
+	bool isPrime = false;
+	if(data->numberMaxCompute < number){
+					
+		for(int i = data->numberMaxCompute+1 ; i <= number; i++){
+			sendMessageToWorker(data, i);
+			receiveMessageToWorker(data, &isPrime);		
+			
+			if(isPrime){
+				data->howMany++;
+				data->highestPrime = i;
+			}
+		}
+		data->numberMaxCompute = number;
+	}
+	else{
+		sendMessageToWorker(data, number);
+		receiveMessageToWorker(data, &isPrime);		
+	}		
+	
+    return isPrime;
+}
+
+
+
+
 /************************************************************************
  * boucle principale de communication avec le client
  ************************************************************************/
-void loop(MasterData* data)
+void loop(masterData* data)
 {
 	bool stop = false;
 	while(!stop){
 		masterClientMessage sendingMessage;
-		sendingMessage.isPrime = false;
-		sendingMessage.order = -1;
-		sendingMessage.number = -1;
+		initMessage(&sendingMessage, -1, -1, false);
 		
 		masterClientMessage receivingMessage;
 		
@@ -65,70 +173,23 @@ void loop(MasterData* data)
 		switch (receivingMessage.order){
 			//STOP
 			case -1: {
-				printf("STOP\n");
-				printf("%d\n", receivingMessage.order);
-				
-				int ret = write(data->fdToWorker, &receivingMessage.order, sizeof(int));
-    			myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
-    			
+				sendMessageToWorker(data, receivingMessage.order);
 				wait(NULL);
 				stop = true;
 			 	break;
 			}
 			//COMPUTE
 			case 1: {
-				printf("COMPUTE\n");
-				printf("%d %d\n", receivingMessage.order, receivingMessage.number);
-				int ret;
-				bool isPrime;
-				if(data->numberMaxCompute < receivingMessage.number){
-					
-					for(int i = data->numberMaxCompute+1 ; i <= receivingMessage.number; i++){
-						printf("%d", i);
-						ret = write(data->fdToWorker, &i, sizeof(int));
-						myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
-						
-						ret = read(data->fdFromWorker, &isPrime, sizeof(bool));
-						myassert(ret == sizeof(bool), "Erreur: Taille du message envoyé incorrecte");
-						printf(" %d\n", isPrime);
-						
-						if(isPrime){
-							data->howMany++;
-							data->highestPrime = i;
-						}
-					}
-					data->numberMaxCompute = receivingMessage.number;
-				}
-				else{
-					ret = write(data->fdToWorker, &receivingMessage.number , sizeof(int));
-					myassert(ret == sizeof(int), "Erreur: Taille du message envoyé incorrecte");
-						
-					ret = read(data->fdFromWorker, &isPrime, sizeof(bool));
-					myassert(ret == sizeof(bool), "Erreur: Taille du message envoyé incorrecte");
-				
-				}
-				
-    			
-    			sendingMessage.isPrime = isPrime;
-    			
-    			
-    			
-			 	break;
+				sendingMessage.isPrime = compute(data, receivingMessage.number);
+				break;
 			}
 			//HOW_MANY_PRIME
 			case 2: {
-				printf("HOW_MANY_PRIME\n");
-				printf("%d\n", receivingMessage.order);
-				
 				sendingMessage.number = data->howMany;
-				
 			 	break;
 			}
 			//HIGHEST_PRIME 
 			case 3: {
-				printf("HIGHEST_PRIME\n");
-				printf("%d\n", receivingMessage.order);
-				
 				sendingMessage.number = data->highestPrime;
 			 	break;
 			}
@@ -165,49 +226,6 @@ void loop(MasterData* data)
 }
 
 
-// Fonction de création des tubes nommées utilisés par le master/client
-static void createNamedTube(){
-	int ret = mkfifo(MASTER_TO_CLIENT_TUBE, 0641);
-	myassert(ret == 0, "Erreur création tube nommé: MasterToClient");
-	
-	ret = mkfifo(CLIENT_TO_MASTER_TUBE, 0641);
-	myassert(ret == 0, "Erreur création tube nommé: ClientToMaster");
-
-}
-
-// Fonction de destruction des tubes nommées utilisés par le master/client
-static void unlinkNamedTube(){
-	int ret = unlink(MASTER_TO_CLIENT_TUBE);
-	myassert(ret == 0, "Erreur fermeture tube nommé: MasterToClient");
-	
-	ret = unlink(CLIENT_TO_MASTER_TUBE);
-	myassert(ret == 0, "Erreur fermeture tube nommé: ClientToMaster");
-
-}
-
-//---------------------------------------------------------------
-// Création du sémaphore 
-static int my_semget()
-{
-    int id = semget(MA_CLE, 2, IPC_CREAT|0641);
-	myassert(id != -1, "Erreur my_semget: Echec de la création du sémaphore");
-	int ret = semctl(id, 0, SETVAL, 1);
-	myassert(ret != -1, "Erreur my_semget: Echec de l'initialisation du premier sémaphore");
-	ret = semctl(id, 1, SETVAL, 1);
-	myassert(ret != -1, "Erreur my_semget: Echec de l'initialisation du second sémaphore");
-	
-	
-    return id;
-}
-
-// destruction du sémaphore
-static void my_destroy(int semId)
-{
-    int ret = semctl(semId, -1, IPC_RMID);
-	myassert(ret != -1, "Erreur my_destroy: Echec de la desturction du sémaphore");
-}
-
-//----------------------------------------------------------------------
 
 
 
@@ -222,7 +240,7 @@ int main(int argc, char * argv[])
         usage(argv[0], NULL);
 	}
 	
-	MasterData data;
+	masterData data;
     // - création des sémaphores
     int semId = my_semget();
     // - création des tubes nommés
