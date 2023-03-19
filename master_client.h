@@ -9,7 +9,7 @@
 #define MASTER_TO_CLIENT_TUBE "MasterToClient"
 #define CLIENT_TO_MASTER_TUBE "ClientToMaster"
 
-// Mutex
+// Sémaphore
 #define MON_FICHIER "master_client.h"
 #define PROJ_ID 5
 
